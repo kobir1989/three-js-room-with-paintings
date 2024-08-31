@@ -10,7 +10,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-camera.position.z = 10;
+camera.position.set(1, 0, 7);
 
 // Set up the renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -46,7 +46,6 @@ function createWall(x, y, z, width, height, depth, rotationY = 0) {
   wall.rotation.y = rotationY;
   wall.geometry.computeBoundingBox();
   wall.boundingBox = wall.geometry.boundingBox.clone();
-  wall.renderOrder = 1; // Ensure walls are rendered first
   wallGroup.add(wall);
 }
 
@@ -54,6 +53,7 @@ function createWall(x, y, z, width, height, depth, rotationY = 0) {
 createWall(0, 0, -5, 15, 5, 0.1); // Front wall
 createWall(-7.5, 0, 0, 15, 5, 0.1, Math.PI / 2); // Left wall
 createWall(7.5, 0, 0, 15, 5, 0.1, Math.PI / 2); // Right wall
+createWall(0, 0, 7.5, 15, 5, 0.1);
 
 // Create Floor using MeshStandardMaterial
 new THREE.TextureLoader().load('/img/Floor.jpg', (texture) => {
@@ -135,7 +135,7 @@ function handleKeyUp(event) {
 function checkCollision(newPosition) {
   const cameraBox = new THREE.Box3().setFromCenterAndSize(
     newPosition,
-    new THREE.Vector3(1.5, 1.5, 1.5) // Slightly increase the size to create a buffer
+    new THREE.Vector3(1, 1, 1)
   );
 
   for (let i = 0; i < wallGroup.children.length; i++) {
