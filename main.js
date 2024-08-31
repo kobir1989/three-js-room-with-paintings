@@ -1,21 +1,28 @@
 import * as THREE from 'three';
+import './style.css';
 import { createPaintings } from './modules/printings';
 
 const scene = new THREE.Scene();
 
 // Set up the camera
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-camera.position.set(1, 0, 7);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 7);
 
 // Set up the renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// Add event listener for window resize
+window.addEventListener('resize', onWindowResize);
 
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -38,10 +45,7 @@ function createWall(x, y, z, width, height, depth, rotationY = 0) {
     metalness: 0.01,
   });
 
-  const wall = new THREE.Mesh(
-    new THREE.BoxGeometry(width, height, depth),
-    material
-  );
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
   wall.position.set(x, y, z);
   wall.rotation.y = rotationY;
   wall.geometry.computeBoundingBox();
@@ -61,32 +65,23 @@ new THREE.TextureLoader().load('/img/Floor.jpg', (texture) => {
     map: texture,
     roughness: 0.6,
   });
-  const floor = new THREE.Mesh(
-    new THREE.BoxGeometry(16, 16, 0.01),
-    floorMaterial
-  );
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(16, 16, 0.01), floorMaterial);
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -2.5;
   scene.add(floor);
 });
 
 // Create Ceiling
-new THREE.TextureLoader().load(
-  '/img/2c70b8f6783bf511cbaad188c34da8a2.jpg',
-  (texture) => {
-    const ceilingMaterial = new THREE.MeshStandardMaterial({
-      map: texture,
-      roughness: 0.5,
-    });
-    const ceiling = new THREE.Mesh(
-      new THREE.BoxGeometry(16, 16, 0.01),
-      ceilingMaterial
-    );
-    ceiling.rotation.x = Math.PI / 2;
-    ceiling.position.y = 2.5;
-    scene.add(ceiling);
-  }
-);
+new THREE.TextureLoader().load('/img/2c70b8f6783bf511cbaad188c34da8a2.jpg', (texture) => {
+  const ceilingMaterial = new THREE.MeshStandardMaterial({
+    map: texture,
+    roughness: 0.5,
+  });
+  const ceiling = new THREE.Mesh(new THREE.BoxGeometry(16, 16, 0.01), ceilingMaterial);
+  ceiling.rotation.x = Math.PI / 2;
+  ceiling.position.y = 2.5;
+  scene.add(ceiling);
+});
 
 // Handle keyboard movement
 const controls = {
@@ -133,16 +128,11 @@ function handleKeyUp(event) {
 
 // Check for collisions between the camera and walls
 function checkCollision(newPosition) {
-  const cameraBox = new THREE.Box3().setFromCenterAndSize(
-    newPosition,
-    new THREE.Vector3(1, 1, 1)
-  );
+  const cameraBox = new THREE.Box3().setFromCenterAndSize(newPosition, new THREE.Vector3(1, 1, 1));
 
   for (let i = 0; i < wallGroup.children.length; i++) {
     const wall = wallGroup.children[i];
-    const wallBoundingBox = new THREE.Box3()
-      .copy(wall.boundingBox)
-      .applyMatrix4(wall.matrixWorld);
+    const wallBoundingBox = new THREE.Box3().copy(wall.boundingBox).applyMatrix4(wall.matrixWorld);
 
     if (cameraBox.intersectsBox(wallBoundingBox)) {
       return true;
