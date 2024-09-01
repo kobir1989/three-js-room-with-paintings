@@ -1,11 +1,20 @@
 import * as THREE from 'three';
 import './style.css';
 import { createPaintings } from './modules/printings';
+import { GUI } from 'lil-gui';
+import { loadCeilingLampModel } from './modules/ceilingLamp';
+import { load3dModel } from './modules/load3dModal';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const scene = new THREE.Scene();
 
 // Set up the camera
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
 camera.position.set(0, 0, 7);
 
 // Set up the renderer
@@ -30,6 +39,53 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 // Add lighting
 const ambientLight = new THREE.AmbientLight('#fff', 0.6);
 scene.add(ambientLight);
+// Initialize GUI
+const gui = new GUI();
+
+// GUI for Ambient Light
+const ambientFolder = gui.addFolder('Ambient Light');
+ambientFolder.add(ambientLight, 'intensity', 0, 2);
+
+// Front wall right side
+loadCeilingLampModel(
+  { x: 2.6, y: 1.8, z: -4 },
+  { x: 2.5, y: 0.5, z: -4 },
+  scene,
+  'Front-right'
+);
+// Front wall left side
+loadCeilingLampModel(
+  { x: -2.6, y: 1.8, z: -4 },
+  { x: -2.5, y: 0.5, z: -4 },
+  scene,
+  'Front-left'
+);
+
+// Left wall Front
+loadCeilingLampModel(
+  { x: -7.4, y: 1.8, z: 0 },
+  { x: -7, y: 1.5, z: 0 },
+  scene,
+  'Left-Corner',
+  Math.PI / 2
+);
+// Left wall Front
+loadCeilingLampModel(
+  { x: 7.4, y: 1.8, z: 0 },
+  { x: 7, y: 1.5, z: 0 },
+  scene,
+  'Right-Corner',
+  -Math.PI / 2
+);
+
+// Load Visitior 3d Modal
+load3dModel(
+  '/3d_scan_man_1/scene.gltf',
+  scene,
+  { x: -3.1, y: -1.3, z: -2 },
+  Math.PI,
+  { x: 1, y: 1, z: 1 }
+);
 
 // Create a group to hold the walls
 const wallGroup = new THREE.Group();
@@ -45,7 +101,10 @@ function createWall(x, y, z, width, height, depth, rotationY = 0) {
     metalness: 0.01,
   });
 
-  const wall = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
+  const wall = new THREE.Mesh(
+    new THREE.BoxGeometry(width, height, depth),
+    material
+  );
   wall.position.set(x, y, z);
   wall.rotation.y = rotationY;
   wall.geometry.computeBoundingBox();
@@ -57,7 +116,7 @@ function createWall(x, y, z, width, height, depth, rotationY = 0) {
 createWall(0, 0, -5, 15, 5, 0.1); // Front wall
 createWall(-7.5, 0, 0, 15, 5, 0.1, Math.PI / 2); // Left wall
 createWall(7.5, 0, 0, 15, 5, 0.1, Math.PI / 2); // Right wall
-createWall(0, 0, 7.5, 15, 5, 0.1);
+createWall(0, 0, 7.5, 15, 5, 0.1); // Back wall
 
 // Create Floor using MeshStandardMaterial
 new THREE.TextureLoader().load('/img/Floor.jpg', (texture) => {
@@ -65,23 +124,50 @@ new THREE.TextureLoader().load('/img/Floor.jpg', (texture) => {
     map: texture,
     roughness: 0.6,
   });
-  const floor = new THREE.Mesh(new THREE.BoxGeometry(16, 16, 0.01), floorMaterial);
+  const floor = new THREE.Mesh(
+    new THREE.BoxGeometry(16, 16, 0.01),
+    floorMaterial
+  );
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -2.5;
   scene.add(floor);
 });
 
 // Create Ceiling
-new THREE.TextureLoader().load('/img/2c70b8f6783bf511cbaad188c34da8a2.jpg', (texture) => {
-  const ceilingMaterial = new THREE.MeshStandardMaterial({
-    map: texture,
-    roughness: 0.5,
-  });
-  const ceiling = new THREE.Mesh(new THREE.BoxGeometry(16, 16, 0.01), ceilingMaterial);
-  ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = 2.5;
-  scene.add(ceiling);
-});
+new THREE.TextureLoader().load(
+  '/img/2c70b8f6783bf511cbaad188c34da8a2.jpg',
+  (texture) => {
+    const ceilingMaterial = new THREE.MeshStandardMaterial({
+      map: texture,
+      roughness: 0.5,
+    });
+    const ceiling = new THREE.Mesh(
+      new THREE.BoxGeometry(16, 16, 0.01),
+      ceilingMaterial
+    );
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.y = 2.5;
+    scene.add(ceiling);
+  }
+);
+
+// Create Door
+new THREE.TextureLoader().load(
+  '/img/door_texture_3d_model_c4d_max_obj_fbx_ma_lwo_3ds_3dm_stl_963847.jpg',
+  (doorTexture) => {
+    const doorMaterials = new THREE.MeshStandardMaterial({
+      map: doorTexture,
+      roughness: 0.5,
+      metalness: 0.5,
+    });
+    const door = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 3, 0.01),
+      doorMaterials
+    );
+    door.position.set(0, -1, 7.3);
+    scene.add(door);
+  }
+);
 
 // Handle keyboard movement
 const controls = {
@@ -128,11 +214,16 @@ function handleKeyUp(event) {
 
 // Check for collisions between the camera and walls
 function checkCollision(newPosition) {
-  const cameraBox = new THREE.Box3().setFromCenterAndSize(newPosition, new THREE.Vector3(1, 1, 1));
+  const cameraBox = new THREE.Box3().setFromCenterAndSize(
+    newPosition,
+    new THREE.Vector3(1, 1, 1)
+  );
 
   for (let i = 0; i < wallGroup.children.length; i++) {
     const wall = wallGroup.children[i];
-    const wallBoundingBox = new THREE.Box3().copy(wall.boundingBox).applyMatrix4(wall.matrixWorld);
+    const wallBoundingBox = new THREE.Box3()
+      .copy(wall.boundingBox)
+      .applyMatrix4(wall.matrixWorld);
 
     if (cameraBox.intersectsBox(wallBoundingBox)) {
       return true;
@@ -162,10 +253,18 @@ function updateMovement() {
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('keyup', handleKeyUp);
 
+// Initialize OrbitControls
+const orbitControls = new OrbitControls(camera, renderer.domElement);
+orbitControls.enableDamping = true; // Enable smooth damping
+orbitControls.dampingFactor = 0.25; // Set damping factor
+orbitControls.screenSpacePanning = false; // Prevent camera from moving vertically
+orbitControls.maxPolarAngle = Math.PI / 2; // Limit vertical rotation to avoid flipping
+
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
   updateMovement();
+  orbitControls.update();
   renderer.render(scene, camera);
 }
 
